@@ -5,7 +5,7 @@ from datetime import datetime
 
 from datetime import datetime
 
-def home(request):
+def weather_home(request):
     context = {}
     if request.method == "POST":
         city = request.POST.get("city")

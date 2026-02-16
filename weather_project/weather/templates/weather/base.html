@@ -79,7 +79,7 @@
 <body class="dark-mode min-vh-100">
 
 <nav class="nav-glass py-2 px-4 d-flex align-items-center justify-content-between">
-    <a href="{% url 'home' %}" class="text-decoration-none d-flex align-items-center">
+    <a href="{% url 'weather_home' %}" class="text-decoration-none d-flex align-items-center">
         <span class="fs-4 fw-bold {% if request.resolver_match.url_name == 'dashboard' %}text-primary{% else %}text-reset{% endif %}">🌤 WeatherPro</span>
     </a>
 
