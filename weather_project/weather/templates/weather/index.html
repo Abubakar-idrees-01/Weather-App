@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather App</title>
+<style>
+body { font-family: Arial; margin:0; padding:0; background:#f0f0f0; color:#000; }
+.container { max-width:600px; margin:2rem auto; text-align:center; }
+.card { background:#fff; padding:2rem; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1); }
+form input { padding:0.5rem; width:60%; margin-right:0.5rem; }
+form button { padding:0.5rem 1rem; }
+img { width:64px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Weather App</h1>
+
+  <!-- User city form -->
+  <form method="get" action="">
+    <input type="text" name="city" placeholder="Enter city name" required>
+    <button type="submit">Get Weather</button>
+  </form>
+
+  {% if weather %}
+  <div class="card">
+    <h2>{{ weather.city }}, {{ weather.region }}, {{ weather.country }}</h2>
+    <p>Local Time: {{ weather.localtime }}</p>
+    <img src="{{ weather.condition_icon }}" alt="{{ weather.condition_text }}">
+    <h3>{{ weather.temp_c }}°C | {{ weather.condition_text }}</h3>
+    <p>Feels Like: {{ weather.feelslike_c }}°C</p>
+    <p>Wind: {{ weather.wind_kph }} kph {{ weather.wind_dir }}</p>
+    <p>Humidity: {{ weather.humidity }}%</p>
+    <p>Cloud Cover: {{ weather.cloud }}%</p>
+    <p>Precipitation: {{ weather.precip_mm }} mm</p>
+    <p>Pressure: {{ weather.pressure_mb }} mb</p>
+    <p>UV Index: {{ weather.uv }}</p>
+    <p>Visibility: {{ weather.vis_km }} km</p>
+  </div>
+  {% endif %}
+</div>
+
+</body>
+</html>
