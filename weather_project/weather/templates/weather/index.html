@@ -1,20 +1,18 @@
 {% extends "weather/base.html" %}
 
-{% block title %}SkyCast | Premium Weather{% endblock %}
+{% block title %}SkyCast | Intelligence{% endblock %}
 
 {% block content %}
 <style>
     :root {
-        --glass-bg: rgba(255, 255, 255, 0.1);
-        --glass-border: rgba(255, 255, 255, 0.2);
+        --glass-bg: rgba(255, 255, 255, 0.08);
+        --glass-border: rgba(255, 255, 255, 0.15);
         --text-main: #ffffff;
         --accent-blue: #4facfe;
-        --accent-secondary: #00f2fe;
         --blur: 20px;
         --bg-gradient: linear-gradient(-45deg, #0f2027, #203a43, #2c5364);
     }
 
-    /* Light Mode Variables */
     [data-theme="light"] {
         --glass-bg: rgba(255, 255, 255, 0.6);
         --glass-border: rgba(0, 0, 0, 0.1);
@@ -23,13 +21,12 @@
     }
 
     body {
-        margin: 0;
-        min-height: 100vh;
+        margin: 0; min-height: 100vh;
         background: var(--bg-gradient);
         background-size: 400% 400%;
         animation: gradientBG 15s ease infinite;
         color: var(--text-main);
-        transition: all 0.5s ease;
+        transition: all 0.4s ease;
         font-family: 'Inter', sans-serif;
     }
 
@@ -39,81 +36,64 @@
         100% { background-position: 0% 50%; }
     }
 
-    .dashboard-container {
-        padding: 2rem 1rem;
-        max-width: 1200px;
-        margin: auto;
-    }
+    .dashboard-container { padding: 1.5rem; max-width: 1100px; margin: auto; }
 
     .glass-card {
         background: var(--glass-bg);
         backdrop-filter: blur(var(--blur));
-        -webkit-backdrop-filter: blur(var(--blur));
         border: 1px solid var(--glass-border);
-        border-radius: 32px;
-        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15);
-        transition: transform 0.3s ease;
+        border-radius: 24px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
     }
 
-    /* Theme Toggle */
-    .theme-switch {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 1000;
-        cursor: pointer;
-        padding: 10px;
-        border-radius: 50%;
-        background: var(--glass-bg);
+    /* Search & Location Group */
+    .search-wrapper {
+        display: flex; gap: 10px; align-items: center;
+    }
+    
+    .input-group-custom {
+        flex-grow: 1; position: relative;
+        background: rgba(255, 255, 255, 0.05);
         border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        display: flex; align-items: center; padding: 5px 15px;
     }
 
-    .search-group .form-control {
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: 1px solid var(--glass-border) !important;
-        color: var(--text-main) !important;
-        border-radius: 18px;
-        padding: 16px 28px;
+    #cityInput {
+        background: transparent !important; border: none !important;
+        color: var(--text-main) !important; padding: 10px; width: 100%;
     }
+
+    .btn-location {
+        background: transparent; border: none; color: var(--accent-blue);
+        font-size: 1.2rem; cursor: pointer; transition: 0.3s;
+    }
+    .btn-location:hover { transform: scale(1.1); color: #fff; }
 
     .btn-action {
-        background: linear-gradient(135deg, var(--accent-blue), var(--accent-secondary));
-        color: white;
-        border: none;
-        border-radius: 18px;
-        font-weight: 700;
-        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+        background: linear-gradient(135deg, #4facfe, #00f2fe);
+        color: white; border: none; border-radius: 14px;
+        padding: 12px 25px; font-weight: 600;
     }
 
-    .stat-box {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 1.5rem;
-        border-radius: 24px;
-        border: 1px solid var(--glass-border);
-        transition: all 0.3s ease;
+    /* Hourly Section */
+    .hourly-scroll {
+        display: flex; gap: 1rem; overflow-x: auto; padding: 10px 5px; scrollbar-width: none;
+    }
+    .hourly-scroll::-webkit-scrollbar { display: none; }
+
+    .hourly-card {
+        min-width: 105px; padding: 1rem; text-align: center;
+        background: var(--glass-bg); border: 1px solid var(--glass-border);
+        border-radius: 20px; flex-shrink: 0;
     }
 
-    .stat-box:hover { background: rgba(255, 255, 255, 0.1); }
-
-    /* Responsive Grid for Forecast */
-    .forecast-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 1.5rem;
-    }
-
-    .daily-card {
-        background: var(--glass-bg);
-        border: 1px solid var(--glass-border);
-        border-radius: 26px;
-        padding: 24px 15px;
-        text-align: center;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    .daily-card:hover {
-        transform: scale(1.05);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    .display-temp { font-size: 3.5rem; font-weight: 800; line-height: 1; }
+    
+    .theme-switch {
+        position: fixed; top: 20px; right: 20px; z-index: 1000;
+        cursor: pointer; padding: 8px 12px; border-radius: 50px;
+        background: var(--glass-bg); border: 1px solid var(--glass-border);
     }
 
     #loader { display: none; }
@@ -124,88 +104,91 @@
 </div>
 
 <div class="dashboard-container">
-    <div class="glass-card p-4 mb-5">
+    <div class="glass-card p-3 mb-4">
         <form method="POST" id="weatherForm">
             {% csrf_token %}
-            <div class="row g-3">
-                <div class="col-md-9">
-                    <input type="text" class="form-control" name="city" placeholder="Search for a city..." required>
+            <div class="search-wrapper">
+                <div class="input-group-custom">
+                    <input type="text" name="city" id="cityInput" list="citySuggestions" 
+                           placeholder="Search city..." autocomplete="off" required>
+                    <button type="button" class="btn-location" onclick="getLocation()" title="Use my location">
+                        📍
+                    </button>
+                    <datalist id="citySuggestions"></datalist>
                 </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-action w-100 h-100 py-3">Update Forecast</button>
-                </div>
-            </div>
-            <div id="loader" class="text-center mt-3">
-                <div class="spinner-grow text-info" role="status"></div>
-                <p class="mt-2 small">Scanning Atmosphere...</p>
+                <button type="submit" class="btn-action">Search</button>
             </div>
         </form>
+        <div id="loader" class="text-center mt-2">
+            <div class="spinner-border spinner-border-sm text-info"></div>
+            <span class="ms-2 small opacity-75">Fetching data...</span>
+        </div>
     </div>
 
     {% if error %}
-    <div class="alert glass-card text-center text-danger p-4 mb-5">{{ error }}</div>
+    <div class="alert glass-card text-center text-danger p-3 mb-4">{{ error }}</div>
     {% endif %}
 
     {% if weather %}
     <div class="row g-4">
         <div class="col-lg-5">
-            <div class="glass-card h-100 p-5 text-center">
-                <h6 class="text-uppercase opacity-75 mb-2">{{ weather.country }}</h6>
-                <h1 class="display-3 fw-bold mb-4">{{ weather.city }}</h1>
-                <div class="py-4">
-                    <img src="https:{{ weather.icon }}" alt="Icon" style="width: 150px; filter: drop-shadow(0 0 20px rgba(0,0,0,0.1));">
-                    <h1 class="display-1 fw-bold mt-3">{{ weather.temp|floatformat:0 }}°</h1>
+            <div class="glass-card h-100 p-4 text-center d-flex flex-column justify-content-center">
+                <h5 class="opacity-50 text-uppercase small mb-1">{{ weather.country }}</h5>
+                <h2 class="fw-bold mb-3">{{ weather.city }}</h2>
+                <div class="my-3">
+                    <img src="https:{{ weather.icon }}" alt="weather-icon" style="width: 100px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));">
+                    <div class="display-temp mt-2">{{ weather.temp|floatformat:0 }}°</div>
                 </div>
-                <h3 class="fw-light opacity-75">{{ weather.condition }}</h3>
+                <p class="fs-5 fw-light text-capitalize mb-0">{{ weather.condition }}</p>
             </div>
         </div>
 
         <div class="col-lg-7">
             <div class="glass-card h-100 p-4">
-                <div class="row g-3 text-center mb-4">
-                    <div class="col-6 col-md-3">
-                        <div class="stat-box">
-                            <small class="opacity-75 d-block mb-1">Feels Like</small>
-                            <span class="h5 fw-bold">{{ weather.feels_like|floatformat:0 }}°</span>
+                <div class="row g-2 text-center mb-4">
+                    <div class="col-3">
+                        <div class="stat-box p-2 rounded" style="background: rgba(255,255,255,0.05);">
+                            <small class="d-block opacity-50">Feels</small>
+                            <span class="fw-bold">{{ weather.feels_like|floatformat:0 }}°</span>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <div class="stat-box">
-                            <small class="opacity-75 d-block mb-1">Humidity</small>
-                            <span class="h5 fw-bold">{{ weather.humidity }}%</span>
+                    <div class="col-3">
+                        <div class="stat-box p-2 rounded" style="background: rgba(255,255,255,0.05);">
+                            <small class="d-block opacity-50">Humid</small>
+                            <span class="fw-bold">{{ weather.humidity }}%</span>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <div class="stat-box">
-                            <small class="opacity-75 d-block mb-1">Wind</small>
-                            <span class="h5 fw-bold">{{ weather.wind|floatformat:0 }}</span>
+                    <div class="col-3">
+                        <div class="stat-box p-2 rounded" style="background: rgba(255,255,255,0.05);">
+                            <small class="d-block opacity-50">Wind</small>
+                            <span class="fw-bold">{{ weather.wind|floatformat:0 }}</span>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <div class="stat-box">
-                            <small class="opacity-75 d-block mb-1">Pressure</small>
-                            <span class="h5 fw-bold">{{ weather.pressure|floatformat:0 }}</span>
+                    <div class="col-3">
+                        <div class="stat-box p-2 rounded" style="background: rgba(255,255,255,0.05);">
+                            <small class="d-block opacity-50">Pres</small>
+                            <span class="fw-bold">{{ weather.pressure|floatformat:0 }}</span>
                         </div>
                     </div>
                 </div>
-                <div style="height: 250px;">
+                <div style="height: 180px;">
                     <canvas id="forecastChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="col-12 mt-4">
-            <h4 class="mb-4 fw-bold">Daily Forecast</h4>
-            <div class="forecast-grid">
-                {% for day in forecast %}
-                <div class="daily-card">
-                    <p class="fw-bold mb-1">{{ day.date }}</p>
-                    <img src="https:{{ day.icon }}" alt="Icon" style="width: 60px;">
-                    <div class="mt-2">
-                        <span class="fs-5 fw-bold d-block">{{ day.max_temp|floatformat:0 }}°</span>
-                        <span class="small opacity-50">{{ day.min_temp|floatformat:0 }}°</span>
-                    </div>
-                    <p class="small mt-2 mb-0 opacity-75">{{ day.condition }}</p>
+        <div class="col-12 mt-2">
+            <div class="d-flex justify-content-between align-items-end mb-3">
+                <h5 class="mb-0">Hourly Timeline</h5>
+                <small class="opacity-50">Next 48 Hours</small>
+            </div>
+            <div class="hourly-scroll">
+                {% for hour in hourly_cards %}
+                <div class="hourly-card">
+                    <small class="d-block opacity-50 mb-2">{{ hour.time }}</small>
+                    <img src="https:{{ hour.icon }}" width="40" class="mx-auto d-block">
+                    <div class="fw-bold mt-2">{{ hour.temp|floatformat:0 }}°</div>
+                    <small style="font-size: 0.65rem;" class="opacity-75 d-block text-truncate">{{ hour.cond }}</small>
                 </div>
                 {% endfor %}
             </div>
@@ -216,13 +199,53 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Theme Toggle Logic
+    // 1. Get Current Location Logic
+    function getLocation() {
+        const loader = document.getElementById('loader');
+        if (navigator.geolocation) {
+            loader.style.display = 'block';
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    // Pass coordinates as the city to WeatherAPI (it supports lat,lon)
+                    document.getElementById('cityInput').value = `${lat},${lon}`;
+                    document.getElementById('weatherForm').submit();
+                },
+                (error) => {
+                    loader.style.display = 'none';
+                    alert("Unable to retrieve location. Please type manually.");
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by your browser.");
+        }
+    }
+
+    // 2. City Suggestion Engine
+    const cityInput = document.getElementById('cityInput');
+    const dataList = document.getElementById('citySuggestions');
+
+    cityInput.addEventListener('input', async (e) => {
+        const query = e.target.value;
+        if (query.length < 3) return;
+        try {
+            const response = await fetch(`/city-suggestions/?q=${query}`);
+            const cities = await response.json();
+            dataList.innerHTML = '';
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                dataList.appendChild(option);
+            });
+        } catch (err) { console.warn("Autocomplete service error"); }
+    });
+
+    // 3. Theme Toggle
     function toggleTheme() {
         const body = document.body;
-        const currentTheme = body.getAttribute('data-theme');
         const icon = document.getElementById('theme-icon');
-        
-        if (currentTheme === 'light') {
+        if (body.getAttribute('data-theme') === 'light') {
             body.removeAttribute('data-theme');
             icon.innerText = '🌙';
         } else {
@@ -231,29 +254,29 @@
         }
     }
 
-    // Chart logic
-    {% if forecast %}
+    // 4. Chart Logic
+    {% if chart_values %}
     const ctx = document.getElementById('forecastChart').getContext('2d');
     new Chart(ctx, {
         type: 'line',
         data: {
-            labels: [{% for day in forecast %}"{{ day.date }}",{% endfor %}],
+            labels: {{ chart_labels|safe }},
             datasets: [{
-                data: [{% for day in forecast %}{{ day.avg_temp }},{% endfor %}],
+                data: {{ chart_values|safe }},
                 borderColor: '#4facfe',
-                borderWidth: 4,
-                tension: 0.4,
-                pointRadius: 5,
+                backgroundColor: 'rgba(79, 172, 254, 0.1)',
                 fill: true,
-                backgroundColor: 'rgba(79, 172, 254, 0.1)'
+                tension: 0.4,
+                pointRadius: 3,
+                borderWidth: 2
             }]
         },
         options: {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                y: { display: false },
-                x: { ticks: { color: 'gray' }, grid: { display: false } }
+                y: { display: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'gray', font: {size: 10}} },
+                x: { grid: { display: false }, ticks: { color: 'gray', font: {size: 10}} }
             }
         }
     });

@@ -1,168 +1,232 @@
 {% extends "weather/base.html" %}
 
-{% block title %}Compare Weather{% endblock %}
+{% block title %}Climate Duel | Compare{% endblock %}
 
 {% block content %}
 <style>
-    /* Custom Design Enhancements */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 20px;
-    }
-    
-    .city-comparison-card {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 15px;
-        transition: transform 0.3s ease;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    :root {
+        --glass: rgba(255, 255, 255, 0.07);
+        --border: rgba(255, 255, 255, 0.15);
+        --accent: #4facfe;
     }
 
-    .form-control {
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    body {
+        background: radial-gradient(circle at top right, #1e3c72, #2a5298, #000);
+        min-height: 100vh;
+        color: white;
+    }
+
+    .duel-container { max-width: 1100px; margin: 40px auto; padding: 20px; }
+
+    .glass-panel {
+        background: var(--glass);
+        backdrop-filter: blur(25px);
+        border: 1px solid var(--border);
+        border-radius: 30px;
+        padding: 40px;
+    }
+
+    /* Comparison Card Styling */
+    .city-card {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+        border-radius: 25px;
+        position: relative;
+        overflow: hidden;
+        transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .city-card:hover { transform: translateY(-10px); background: rgba(0, 0, 0, 0.3); }
+
+    .winner-badge {
+        position: absolute; top: 15px; right: 15px;
+        background: linear-gradient(45deg, #f6d365, #fda085);
+        color: #000; padding: 5px 15px; border-radius: 50px;
+        font-weight: 800; font-size: 0.7rem; text-transform: uppercase;
+        box-shadow: 0 5px 15px rgba(253, 160, 133, 0.4);
+    }
+
+    /* Input Styling */
+    .duel-input {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 15px !important;
         color: white !important;
+        padding: 15px 20px !important;
     }
 
-    .form-control::placeholder {
-        color: rgba(255, 255, 255, 0.5);
+    .btn-duel {
+        background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+        border: none; border-radius: 15px; font-weight: 700;
+        letter-spacing: 1px; transition: 0.3s;
     }
+    .btn-duel:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(79, 172, 254, 0.5); }
 
-    .vs-divider {
-        font-weight: 900;
-        color: rgba(255, 255, 255, 0.2);
-        font-size: 1.5rem;
-    }
+    .chart-container { height: 250px; margin-top: 20px; }
     
-    /* Warmer city highlight using your original logic */
-    .border-warning {
-        border: 2px solid #ffc107 !important;
-        box-shadow: 0 0 20px rgba(255, 193, 7, 0.2);
+    .vs-circle {
+        width: 50px; height: 50px; background: white; color: black;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-weight: 900; position: absolute; left: 50%; transform: translateX(-50%);
+        z-index: 10; top: 50%; border: 4px solid #1e3c72;
     }
 
     #loader { display: none; }
 </style>
 
-<div class="container mt-5">
-    <div class="glass-card p-4 p-md-5 shadow-lg">
-
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="fw-bold m-0 text-white">🌍 Compare Current Weather</h3>
-            <button onclick="toggleMode()" class="btn btn-sm btn-outline-light rounded-pill px-3">
-                Toggle Mode
-            </button>
+<div class="duel-container">
+    <div class="glass-panel">
+        <div class="text-center mb-5">
+            <h1 class="fw-black display-5">CLIMATE <span style="color: var(--accent)">DUEL</span></h1>
+            <p class="opacity-50">Compare atmospheric dominance between two cities</p>
         </div>
 
         <form method="POST" id="weatherForm">
             {% csrf_token %}
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <input type="text" name="city1" class="form-control form-control-lg" placeholder="Enter First City" id="cityInput">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <input type="text" name="city1" id="input1" list="suggest1" class="form-control duel-input" placeholder="Primary City" autocomplete="off" required>
+                    <datalist id="suggest1"></datalist>
                 </div>
-                <div class="col-md-6">
-                    <input type="text" name="city2" class="form-control form-control-lg" placeholder="Enter Second City">
+                <div class="col-md-2 text-center d-none d-md-flex align-items-center justify-content-center">
+                    <span class="opacity-25 fw-bold">VS</span>
                 </div>
-            </div>
-
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-light w-100 fw-bold">
-                    Compare Cities
-                </button>
-            </div>
-
-            <div id="loader" class="text-center mt-4">
-                <div class="spinner-border text-light" role="status"></div>
-                <p class="text-white-50 small mt-2">Syncing atmospheric data...</p>
+                <div class="col-md-5">
+                    <input type="text" name="city2" id="input2" list="suggest2" class="form-control duel-input" placeholder="Rival City" autocomplete="off" required>
+                    <datalist id="suggest2"></datalist>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-duel w-100 py-3 mt-2">INITIATE COMPARISON</button>
+                </div>
             </div>
         </form>
 
-        {% if error %}
-        <div class="alert alert-danger mt-3 text-center border-0 bg-danger text-white">
-            {{ error }}
+        <div id="loader" class="text-center mt-5">
+            <div class="spinner-grow text-info"></div>
+            <p class="mt-3 small opacity-50">Calculating atmospheric variance...</p>
         </div>
-        {% endif %}
 
         {% if city1 and city2 %}
-        <div class="row mt-5">
+        <div class="row mt-5 position-relative">
+            <div class="vs-circle d-none d-lg-flex">VS</div>
 
-            <div class="col-md-6 mb-4">
-                <div class="city-comparison-card p-4 text-center {% if city1.temp > city2.temp %}border border-warning{% endif %}">
-                    <p class="text-white-50 mb-0 small text-uppercase">{{ city1.country }}</p>
-                    <h2 class="fw-bold mb-3">{{ city1.name }}</h2>
-                    <img src="https:{{ city1.icon }}" alt="weather-icon" class="mb-2">
-                    <h1 class="display-4 fw-bold mb-0">{{ city1.temp }}°C</h1>
-                    <p class="lead text-white-50">{{ city1.condition }}</p>
-
-                    <div class="mt-4 pt-3 border-top border-secondary text-start">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>🌡 Feels Like</span>
-                            <span class="fw-bold">{{ city1.feels }}°C</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>💧 Humidity</span>
-                            <span class="fw-bold">{{ city1.humidity }}%</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>💨 Wind</span>
-                            <span class="fw-bold">{{ city1.wind }} kph</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>🔽 Pressure</span>
-                            <span class="fw-bold">{{ city1.pressure }} mb</span>
-                        </div>
+            <div class="col-lg-6 mb-4">
+                <div class="city-card p-4 h-100">
+                    {% if city1.temp > city2.temp %}<div class="winner-badge">Warmer</div>{% endif %}
+                    <small class="opacity-50">{{ city1.country }}</small>
+                    <h2 class="fw-bold">{{ city1.name }}</h2>
+                    <div class="d-flex align-items-center gap-3 my-4">
+                        <h1 class="display-3 fw-bold mb-0">{{ city1.temp|floatformat:0 }}°</h1>
+                        <img src="https:{{ city1.icon }}" width="80">
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="radar1"></canvas>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6 mb-4">
-                <div class="city-comparison-card p-4 text-center {% if city2.temp > city1.temp %}border border-warning{% endif %}">
-                    <p class="text-white-50 mb-0 small text-uppercase">{{ city2.country }}</p>
-                    <h2 class="fw-bold mb-3">{{ city2.name }}</h2>
-                    <img src="https:{{ city2.icon }}" alt="weather-icon" class="mb-2">
-                    <h1 class="display-4 fw-bold mb-0">{{ city2.temp }}°C</h1>
-                    <p class="lead text-white-50">{{ city2.condition }}</p>
+            <div class="col-lg-6 mb-4">
+                <div class="city-card p-4 h-100">
+                    {% if city2.temp > city1.temp %}<div class="winner-badge">Warmer</div>{% endif %}
+                    <small class="opacity-50">{{ city2.country }}</small>
+                    <h2 class="fw-bold">{{ city2.name }}</h2>
+                    <div class="d-flex align-items-center gap-3 my-4">
+                        <h1 class="display-3 fw-bold mb-0">{{ city2.temp|floatformat:0 }}°</h1>
+                        <img src="https:{{ city2.icon }}" width="80">
+                    </div>
 
-                    <div class="mt-4 pt-3 border-top border-secondary text-start">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>🌡 Feels Like</span>
-                            <span class="fw-bold">{{ city2.feels }}°C</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>💧 Humidity</span>
-                            <span class="fw-bold">{{ city2.humidity }}%</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>💨 Wind</span>
-                            <span class="fw-bold">{{ city2.wind }} kph</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>🔽 Pressure</span>
-                            <span class="fw-bold">{{ city2.pressure }} mb</span>
-                        </div>
+                    <div class="chart-container">
+                        <canvas id="radar2"></canvas>
                     </div>
                 </div>
             </div>
-
         </div>
 
-        <div class="mt-2 text-center">
-            <div class="d-inline-block px-4 py-2 rounded-pill shadow-sm" style="background: rgba(255,255,255,0.1);">
-                <h6 class="m-0 text-white-50">
-                    Difference: <span class="text-white fw-bold">{{ city1.temp }}°C</span> vs <span class="text-white fw-bold">{{ city2.temp }}°C</span> 
-                    <span class="ms-2 text-warning fw-bold">(Δ {{ temp_difference }}°C)</span>
-                </h6>
-            </div>
+        <div class="glass-card mt-4 p-4 overflow-hidden">
+            <table class="table table-borderless text-white m-0">
+                <thead>
+                    <tr class="opacity-50 small">
+                        <th>METRIC</th>
+                        <th class="text-center">{{ city1.name }}</th>
+                        <th class="text-center">{{ city2.name }}</th>
+                    </tr>
+                </thead>
+                <tbody class="fw-bold">
+                    <tr>
+                        <td>Feels Like</td>
+                        <td class="text-center text-info">{{ city1.feels }}°</td>
+                        <td class="text-center text-info">{{ city2.feels }}°</td>
+                    </tr>
+                    <tr>
+                        <td>Humidity</td>
+                        <td class="text-center">{{ city1.humidity }}%</td>
+                        <td class="text-center">{{ city2.humidity }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Wind Speed</td>
+                        <td class="text-center">{{ city1.wind }} <small>kph</small></td>
+                        <td class="text-center">{{ city2.wind }} <small>kph</small></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
         {% endif %}
-
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Logic to trigger loader on form submit
-    document.getElementById('weatherForm').onsubmit = function() {
+    // 1. Suggestion Logic for both inputs
+    const setupSuggest = (inputId, listId) => {
+        const input = document.getElementById(inputId);
+        const list = document.getElementById(listId);
+        input.addEventListener('input', async (e) => {
+            if (e.target.value.length < 3) return;
+            const res = await fetch(`/city-suggestions/?q=${e.target.value}`);
+            const data = await res.json();
+            list.innerHTML = data.map(c => `<option value="${c}">`).join('');
+        });
+    };
+    setupSuggest('input1', 'suggest1');
+    setupSuggest('input2', 'suggest2');
+
+    // 2. Radar Chart Logic
+    const createRadar = (canvasId, color, dataValues) => {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Temp', 'Humidity', 'Wind', 'Pressure', 'Feels'],
+                datasets: [{
+                    data: dataValues,
+                    backgroundColor: color + '33',
+                    borderColor: color,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        angleLines: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { display: false },
+                        suggestedMin: 0
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    };
+
+    {% if city1 and city2 %}
+    // Normalized data for radar (Values mapped 0-100 roughly)
+    createRadar('radar1', '#4facfe', [{{city1.temp}}*2, {{city1.humidity}}, {{city1.wind}}*3, {{city1.pressure}}/15, {{city1.feels}}*2]);
+    createRadar('radar2', '#ff6b6b', [{{city2.temp}}*2, {{city2.humidity}}, {{city2.wind}}*3, {{city2.pressure}}/15, {{city2.feels}}*2]);
+    {% endif %}
+
+    document.getElementById('weatherForm').onsubmit = () => {
         document.getElementById('loader').style.display = 'block';
     };
 </script>
