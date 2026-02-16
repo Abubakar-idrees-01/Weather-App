@@ -1,0 +1,169 @@
+{% extends "weather/base.html" %}
+
+{% block title %}Compare Weather{% endblock %}
+
+{% block content %}
+<style>
+    /* Custom Design Enhancements */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+    }
+    
+    .city-comparison-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        transition: transform 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .form-control {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+    }
+
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .vs-divider {
+        font-weight: 900;
+        color: rgba(255, 255, 255, 0.2);
+        font-size: 1.5rem;
+    }
+    
+    /* Warmer city highlight using your original logic */
+    .border-warning {
+        border: 2px solid #ffc107 !important;
+        box-shadow: 0 0 20px rgba(255, 193, 7, 0.2);
+    }
+
+    #loader { display: none; }
+</style>
+
+<div class="container mt-5">
+    <div class="glass-card p-4 p-md-5 shadow-lg">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold m-0 text-white">🌍 Compare Current Weather</h3>
+            <button onclick="toggleMode()" class="btn btn-sm btn-outline-light rounded-pill px-3">
+                Toggle Mode
+            </button>
+        </div>
+
+        <form method="POST" id="weatherForm">
+            {% csrf_token %}
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <input type="text" name="city1" class="form-control form-control-lg" placeholder="Enter First City" id="cityInput">
+                </div>
+                <div class="col-md-6">
+                    <input type="text" name="city2" class="form-control form-control-lg" placeholder="Enter Second City">
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-light w-100 fw-bold">
+                    Compare Cities
+                </button>
+            </div>
+
+            <div id="loader" class="text-center mt-4">
+                <div class="spinner-border text-light" role="status"></div>
+                <p class="text-white-50 small mt-2">Syncing atmospheric data...</p>
+            </div>
+        </form>
+
+        {% if error %}
+        <div class="alert alert-danger mt-3 text-center border-0 bg-danger text-white">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% if city1 and city2 %}
+        <div class="row mt-5">
+
+            <div class="col-md-6 mb-4">
+                <div class="city-comparison-card p-4 text-center {% if city1.temp > city2.temp %}border border-warning{% endif %}">
+                    <p class="text-white-50 mb-0 small text-uppercase">{{ city1.country }}</p>
+                    <h2 class="fw-bold mb-3">{{ city1.name }}</h2>
+                    <img src="https:{{ city1.icon }}" alt="weather-icon" class="mb-2">
+                    <h1 class="display-4 fw-bold mb-0">{{ city1.temp }}°C</h1>
+                    <p class="lead text-white-50">{{ city1.condition }}</p>
+
+                    <div class="mt-4 pt-3 border-top border-secondary text-start">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>🌡 Feels Like</span>
+                            <span class="fw-bold">{{ city1.feels }}°C</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>💧 Humidity</span>
+                            <span class="fw-bold">{{ city1.humidity }}%</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>💨 Wind</span>
+                            <span class="fw-bold">{{ city1.wind }} kph</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>🔽 Pressure</span>
+                            <span class="fw-bold">{{ city1.pressure }} mb</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="city-comparison-card p-4 text-center {% if city2.temp > city1.temp %}border border-warning{% endif %}">
+                    <p class="text-white-50 mb-0 small text-uppercase">{{ city2.country }}</p>
+                    <h2 class="fw-bold mb-3">{{ city2.name }}</h2>
+                    <img src="https:{{ city2.icon }}" alt="weather-icon" class="mb-2">
+                    <h1 class="display-4 fw-bold mb-0">{{ city2.temp }}°C</h1>
+                    <p class="lead text-white-50">{{ city2.condition }}</p>
+
+                    <div class="mt-4 pt-3 border-top border-secondary text-start">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>🌡 Feels Like</span>
+                            <span class="fw-bold">{{ city2.feels }}°C</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>💧 Humidity</span>
+                            <span class="fw-bold">{{ city2.humidity }}%</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>💨 Wind</span>
+                            <span class="fw-bold">{{ city2.wind }} kph</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>🔽 Pressure</span>
+                            <span class="fw-bold">{{ city2.pressure }} mb</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mt-2 text-center">
+            <div class="d-inline-block px-4 py-2 rounded-pill shadow-sm" style="background: rgba(255,255,255,0.1);">
+                <h6 class="m-0 text-white-50">
+                    Difference: <span class="text-white fw-bold">{{ city1.temp }}°C</span> vs <span class="text-white fw-bold">{{ city2.temp }}°C</span> 
+                    <span class="ms-2 text-warning fw-bold">(Δ {{ temp_difference }}°C)</span>
+                </h6>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+    // Logic to trigger loader on form submit
+    document.getElementById('weatherForm').onsubmit = function() {
+        document.getElementById('loader').style.display = 'block';
+    };
+</script>
+{% endblock %}

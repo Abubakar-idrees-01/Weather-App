@@ -1,133 +1,227 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Weather Pro</title>
+{% extends "weather/base.html" %}
 
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+{% block title %}Weather Dashboard{% endblock %}
 
-    <!-- Tailwind -->
-    <script src="https://cdn.tailwindcss.com"></script>
+{% block content %}
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.08);
+        --glass-border: rgba(255, 255, 255, 0.15);
+        --accent-blue: #4facfe;
+        --blur: 20px;
+    }
 
-    <style>
-        body {
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            min-height: 100vh;
-        }
+    .dashboard-container {
+        padding-top: 1.5rem;
+        max-width: 1100px;
+        margin: auto;
+    }
 
-        .glass {
-            backdrop-filter: blur(15px);
-            background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-        }
-    </style>
-</head>
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(var(--blur));
+        -webkit-backdrop-filter: blur(var(--blur));
+        border: 1px solid var(--glass-border);
+        border-radius: 28px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    }
 
-<body class="text-white d-flex align-items-center justify-content-center">
+    .search-group .form-control {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: white !important;
+        border-radius: 16px;
+        padding: 14px 24px;
+        font-size: 1rem;
+    }
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
+    .btn-action {
+        background: var(--accent-blue);
+        color: white;
+        border: none;
+        border-radius: 16px;
+        font-weight: 600;
+        transition: 0.3s;
+    }
 
-            <div class="glass p-5 shadow-lg">
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
 
-                <h2 class="text-center mb-4 fw-bold">🌤 Weather Pro</h2>
+    @media (min-width: 768px) {
+        .stats-grid { grid-template-columns: repeat(4, 1fr); }
+    }
 
-                <!-- FORM -->
-                <form method="POST" id="weatherForm">
-                    {% csrf_token %}
-                    <div class="mb-3 position-relative">
-                        <input type="text"
-                               class="form-control"
-                               name="city"
-                               id="cityInput"
-                               placeholder="Enter city..."
-                               autocomplete="off">
+    .stat-box {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 1.5rem;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
 
-                        <div id="suggestions"
-                             class="list-group position-absolute w-100"
-                             style="z-index:1000;"></div>
+    .forecast-scroll {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 15px;
+        scrollbar-width: none;
+    }
+
+    .forecast-scroll::-webkit-scrollbar { display: none; }
+
+    .daily-card {
+        min-width: 110px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        border-radius: 22px;
+        padding: 18px 10px;
+        text-align: center;
+    }
+
+    #loader { display: none; }
+    .text-accent { color: var(--accent-blue); }
+</style>
+
+<div class="dashboard-container px-3">
+    
+    <div class="glass-card p-3 mb-4">
+        <form method="POST" id="weatherForm" class="search-group">
+            {% csrf_token %}
+            <div class="row g-2">
+                <div class="col">
+                    <input type="text" class="form-control" name="city" id="cityInput" placeholder="Enter city name..." autocomplete="off" required>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-action px-4 h-100">Search</button>
+                </div>
+            </div>
+            
+            <div id="loader" class="text-center mt-3">
+                <div class="spinner-border spinner-border-sm text-info" role="status"></div>
+                <span class="ms-2 small opacity-75">Syncing with satellite...</span>
+            </div>
+        </form>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger border-0 glass-card text-white text-center mb-4 p-3">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if weather %}
+    <div class="animate__animated animate__fadeInUp">
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-5">
+                <div class="glass-card h-100 p-4 p-md-5 text-center d-flex flex-column justify-content-center">
+                    <p class="text-uppercase tracking-widest small opacity-50 mb-1">{{ weather.country|default:"Location" }}</p>
+                    <h2 class="fw-bold mb-4">{{ weather.city }}</h2>
+                    
+                    <div class="d-flex justify-content-center align-items-center my-3">
+                        <img src="https:{{ weather.icon }}" 
+                             alt="weather icon" style="width: 130px; filter: drop-shadow(0 0 15px rgba(255,255,255,0.2));">
+                        <h1 class="display-2 fw-bold mb-0 ms-3">{{ weather.temp|floatformat:0 }}°</h1>
                     </div>
-
-                    <button type="submit"
-                            class="btn btn-primary w-100">
-                        Check Weather
-                    </button>
-                </form>
-
-                <!-- ERROR -->
-                {% if error %}
-                <div class="alert alert-danger mt-3 text-center">
-                    {{ error }}
+                    
+                    <p class="fs-4 fw-light text-accent text-capitalize">{{ weather.condition|default:"Clear" }}</p>
                 </div>
-                {% endif %}
-
-                <!-- WEATHER RESULT -->
-                {% if weather %}
-                <div class="text-center mt-4">
-
-                    <h3>{{ weather.city }}, {{ weather.country }}</h3>
-
-                    <img src="https:{{ weather.icon }}" alt="icon">
-
-                    <h1 class="display-4 fw-bold">
-                        {{ weather.temp }}°C
-                    </h1>
-
-                    <p class="lead">
-                        {{ weather.condition }}
-                    </p>
-
-                </div>
-                {% endif %}
-
             </div>
 
+            <div class="col-12 col-lg-7">
+                <div class="glass-card h-100 p-4">
+                    <h5 class="small text-uppercase opacity-50 fw-bold mb-4">Air Conditions</h5>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <i class="opacity-50 small d-block mb-2">Feels Like</i>
+                            <span class="h4 fw-bold">{{ weather.feels_like|floatformat:0 }}°</span>
+                        </div>
+                        <div class="stat-box">
+                            <i class="opacity-50 small d-block mb-2">Humidity</i>
+                            <span class="h4 fw-bold">{{ weather.humidity }}%</span>
+                        </div>
+                        <div class="stat-box">
+                            <i class="opacity-50 small d-block mb-2">Wind Speed</i>
+                            <span class="h4 fw-bold">{{ weather.wind|floatformat:1 }} <small class="fs-6">km/h</small></span>
+                        </div>
+                        <div class="stat-box">
+                            <i class="opacity-50 small d-block mb-2">Pressure</i>
+                            <span class="h4 fw-bold">{{ weather.pressure }} <small class="fs-6">mb</small></span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4" style="height: 180px;">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        {% if forecast %}
+        <div class="glass-card p-4 mb-5">
+            <h5 class="small text-uppercase opacity-50 fw-bold mb-4">7-Day Forecast</h5>
+            <div class="forecast-scroll">
+                {% for day in forecast %}
+                <div class="daily-card">
+                    <p class="small fw-bold mb-2">{{ day.date }}</p>
+                    <img src="https:{{ day.icon }}" 
+                         alt="icon" style="width: 45px;" class="my-2">
+                    <div class="mt-2">
+                        <span class="d-block fw-bold">{{ day.max_temp|floatformat:0 }}°</span>
+                        <span class="d-block small opacity-40">{{ day.min_temp|floatformat:0 }}°</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
+    {% endif %}
 </div>
+{% endblock %}
 
-<!-- 🔥 AUTOCOMPLETE JS -->
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% if forecast %}
 <script>
-const input = document.getElementById("cityInput");
-const suggestionsBox = document.getElementById("suggestions");
+    const ctx = document.getElementById('forecastChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+    gradient.addColorStop(0, 'rgba(79, 172, 254, 0.4)');
+    gradient.addColorStop(1, 'rgba(79, 172, 254, 0)');
 
-input.addEventListener("input", function () {
-    const query = this.value;
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            // Using quotes "{{ day.date }}" ensures the browser doesn't do 2026 - 02 - 16
+            labels: [{% for day in forecast %}"{{ day.date }}",{% endfor %}], 
+            datasets: [{
+                data: [{% for day in forecast %}{{ day.avg_temp }},{% endfor %}],
+                borderColor: '#4facfe',
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 0,
+                pointHitRadius: 20
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { display: false },
+                x: { 
+                    grid: { display: false },
+                    ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } }
+                }
+            }
+        }
+    });
 
-    if (query.length < 2) {
-        suggestionsBox.innerHTML = "";
-        return;
-    }
-
-    fetch(`/suggest/?q=${query}`)
-        .then(response => response.json())
-        .then(data => {
-            suggestionsBox.innerHTML = "";
-
-            data.forEach(city => {
-                const item = document.createElement("a");
-                item.classList.add("list-group-item", "list-group-item-action");
-                item.textContent = city;
-
-                item.addEventListener("click", () => {
-                    input.value = city;
-                    suggestionsBox.innerHTML = "";
-                });
-
-                suggestionsBox.appendChild(item);
-            });
-        });
-});
-
-// Close suggestions if clicked outside
-document.addEventListener("click", function(e) {
-    if (!e.target.closest("#cityInput")) {
-        suggestionsBox.innerHTML = "";
-    }
-});
+    document.getElementById('weatherForm').onsubmit = function() {
+        document.getElementById('loader').style.display = 'block';
+    };
 </script>
-
-</body>
-</html>
+{% endif %}
+{% endblock %}

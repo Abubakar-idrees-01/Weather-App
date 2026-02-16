@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Weather Pro{% endblock %}</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            transition: 0.4s ease;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Responsive Navigation Styling */
+        .nav-glass {
+            backdrop-filter: blur(15px);
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 2000;
+        }
+
+        .glass {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            transition: 0.4s ease;
+        }
+
+        .dark-mode {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+        }
+
+        .light-mode {
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+            color: #1a1a1a;
+        }
+
+        /* Light mode specific glass adjustments */
+        .light-mode .glass {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .light-mode .nav-glass {
+            background: rgba(255, 255, 255, 0.7);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        #loader {
+            display: none;
+        }
+
+        /* Layout adjustment for fixed navbar */
+        main {
+            padding-top: 80px;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .nav-text { display: none; } /* Hides text on mobile, icons only */
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+
+<body class="dark-mode min-vh-100">
+
+<nav class="nav-glass py-2 px-4 d-flex align-items-center justify-content-between">
+    <a href="{% url 'home' %}" class="text-decoration-none d-flex align-items-center">
+        <span class="fs-4 fw-bold {% if request.resolver_match.url_name == 'dashboard' %}text-primary{% else %}text-reset{% endif %}">🌤 WeatherPro</span>
+    </a>
+
+    <div class="d-flex gap-2 align-items-center">
+                
+        <a href="{% url 'compare' %}" class="btn btn-sm btn-outline-warning border-0 px-3 py-2">
+            ⚖️ <span class="nav-text ms-1">Compare</span>
+        </a>
+
+        <button onclick="toggleMode()" class="btn btn-sm btn-light rounded-circle shadow-sm" style="width: 40px; height: 40px;">
+            🌓
+        </button>
+    </div>
+</nav>
+
+<main class="container d-flex align-items-center justify-content-center min-vh-100">
+    <div class="w-100 py-4">
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<script>
+/* ---------------- Common Scripts (Unchanged Logic) ---------------- */
+const loader = document.getElementById("loader");
+const form = document.getElementById("weatherForm");
+
+/* Dark / Light Toggle */
+function toggleMode() {
+    document.body.classList.toggle("dark-mode");
+    document.body.classList.toggle("light-mode");
+}
+
+/* Loader Animation */
+if(form){
+    form.addEventListener("submit", function () {
+        loader.style.display = "block";
+    });
+}
+
+/* Detect Location */
+function detectLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+            const input = document.querySelector("input[name='city']");
+            if(input){
+                input.value = position.coords.latitude + "," + position.coords.longitude;
+                form.submit();
+            }
+        });
+    } else {
+        alert("Geolocation not supported.");
+    }
+}
+
+/* Autocomplete */
+const input = document.getElementById("cityInput");
+const suggestionsBox = document.getElementById("suggestions");
+
+if(input){
+    input.addEventListener("input", function () {
+        const query = this.value;
+        if (query.length < 2) {
+            suggestionsBox.innerHTML = "";
+            return;
+        }
+        fetch(`/suggest/?q=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                suggestionsBox.innerHTML = "";
+                data.forEach(city => {
+                    const item = document.createElement("a");
+                    item.classList.add("list-group-item", "list-group-item-action");
+                    item.textContent = city;
+                    item.onclick = () => {
+                        input.value = city;
+                        suggestionsBox.innerHTML = "";
+                    };
+                    suggestionsBox.appendChild(item);
+                });
+            });
+    });
+}
+</script>
+
+{% block scripts %}{% endblock %}
+
+</body>
+</html>
