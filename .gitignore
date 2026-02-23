@@ -1,10 +1,21 @@
-**pycache**/
+# Python
 *.pyc
-db.sqlite3
+*.pyo
+__pycache__/
+
+# Environment
 .env
 venv/
 env/
-media/
-staticfiles/
-static/
+
+# IDEs
 .vscode/
+.idea/
+
+# Static files / media (if you want to ignore uploads)
+staticfiles/
+media/
+
+# OS files
+.DS_Store
+Thumbs.db
